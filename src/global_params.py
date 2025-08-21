@@ -26,6 +26,7 @@ class System_Config_Params(BaseParams):
         self.ok_status_label_text : str = "OK"
         self.ng_status_label_style : str = "border: 1px solid #ccc; border-radius: 3px; background-color: red; font-weight: bold;color:white"
         self.ng_status_label_text : str = "NG"
+        self.message_need_take_out_product : str = "Take out the product out and scan the SN first."
         self.time_to_focus_mac_input : int = 500
         self.show_image_focus_score : bool = True
         self.skip_frames_show_focus : int = 1
@@ -102,7 +103,6 @@ class Detect_LCD_Params(BaseParams):
         self.expand_crop_right : int = 0
         self.expand_crop_top : int = 3
         
-        
         self.min_LCD_area_ratio : float = 0.35
         self.max_LCD_area_ratio : float = 0.85
         self.max_LCD_w_h_ratio : float = 0.9
@@ -140,7 +140,7 @@ class Abnormal_Inference_Params(BaseParams):
         self.inference_type : str = 'Openvino' 
         self.heat_map_NG_thresh_hold : float = 0.14 # < 1
         self.heat_map_display_alpha : float = 0.7 # < 1
-        self.max_ratio_w_h_cnt : float = 3
+        self.max_ratio_w_h_cnt : float = 10
         self.brightness_threshold_caculate_dust_size : float = 0.9 # < 1
         self.ng_color : list[int] = [0,0,255]
         self.ok_color : list[int] = [0,255,0]
@@ -149,7 +149,10 @@ class Abnormal_Inference_Params(BaseParams):
         self.is_need_show_abnormal_score : bool = True
         self.is_need_show_abnormal_radius_size : bool = True
         self.is_need_show_size_in_um : bool = True
-        self.min_abnormal_pixel_count : int = 3
+        self.max_radius_abnormal_pixel_in_pixel : int = 10
+        # self.min_radius_abnormal_pixel_count_size2 : int = 10
+        self.max_abnormal_count1 : int = 4
+        # self.max_abnormal_count2 : int = 0
         self.is_need_to_dilated : bool = True
         self.dilated_kernel_size : int = 15
 

@@ -247,7 +247,7 @@ class StreamVideoWorker(QObject):
                         draw_focus_and_brightness_score(frame,current_focus,current_brightness)
 
                 self.emit_frame_signal.emit([frame, fps])
-                self._parent.is_abnormal = None
+                # self._parent.is_abnormal = None
             else:
                 if detect_lcd_params.is_need_check_stable_frames:
                     should_process, score = quick_stability_check(frame)
@@ -256,7 +256,7 @@ class StreamVideoWorker(QObject):
                     )
                     if not should_process:
                         self.emit_frame_signal.emit([frame, fps])
-                        # self._parent.is_abnormal = None
+                        self._parent.is_abnormal = None
                         continue
 
                 image_with_heatmap, image_with_dust, is_abnormal, original_box = (
@@ -318,7 +318,6 @@ class StreamVideoWorker(QObject):
                 self.cap = None
                 cv2.destroyAllWindows()
             console_logger.info("Stop camera successfully, release cap done!")
-
 # # project
 class SFCWorker(QObject):
     # finished = Signal(object)
@@ -868,6 +867,7 @@ class MainWindowController(QMainWindow, Ui_MainWindow):
                     )
                     # self.set_background_label(self.ui_label_display_video, display_image)
                     self.ui_label_display_video.setImage(display_image)
+                    self.is_abnormal = True
                     return
             if not is_abnormal:
                 self.ok_frame_count += 1
@@ -941,60 +941,66 @@ class MainWindowController(QMainWindow, Ui_MainWindow):
         return mac_value.startswith(product_config_params.mac_start_with)
 
     def handle_mac_input_changed(self, new_text: str) -> None:
+        
         min_len = product_config_params.mac_min_len
-        if (
-            len(new_text) >= min_len
-            and not self.is_calling_sfc
-            and self.is_running_stream
-            and self.is_auto_process
-        ):
-            is_valid_mac = self.validator_mac_input(new_text[0:min_len])
-            if is_valid_mac:
-                self.input_mac_value = new_text[0:min_len]
+        if self.is_abnormal is not None and self.input_mac_value == "":
+            if len(new_text) >= min_len:
+                self.set_system_message(system_config_params.message_need_take_out_product, "red")
                 self.ui_mac_input.setText("")
-                self.set_system_message(
-                    sfc_request_params.notify_text_valid_sn, color="green"
-                )
-                self.start_operation = time.time()
-                operation_history_log.info(f"Scan SN: {self.input_mac_value} - PASS")
-
-                return
-            if self.input_mac_value == "":
-                self.set_system_message(
-                    sfc_request_params.notify_text_invalid_sn, color="red"
-                )
-                operation_history_log.warning(f"SN scan failed: {self.input_mac_value}")
-                self.ui_mac_input.setText("")
-            else:
-                if len(new_text) >= product_config_params.tray_min_len:
-                    if self.is_abnormal is False:
-                        self.set_system_message(
-                            sfc_request_params.notify_text_valid_tray, color="green"
-                        )
-                        operation_history_log.info(
-                            f"SN: {self.input_mac_value} - scan TRAY PASS"
-                        )
-                        self.input_tray_value = new_text[
-                            0 : product_config_params.tray_min_len
-                        ]
-                        data_sfc = sfc_request_params.Data_send_to_SFC
-                        keys = list(data_sfc.keys())
-                        data_sfc[keys[0]] = sfc_request_params.LINE_NAME
-                        data_sfc[keys[1]] = sfc_request_params.GROUP_NAME
-                        data_sfc[keys[2]] = sfc_request_params.SP
-                        data_sfc[keys[3]] = (
-                            f"SN={self.input_mac_value},TRAY={self.input_tray_value},EMP={sfc_request_params.EMP},PASSED={sfc_request_params.PASSED}"
-                        )
-                        # self.is_calling_sfc = True
-                        self.send_sfc_request(data_sfc)
-                    else:
-                        operation_history_log.info(
-                            f"SN: {self.input_mac_value} - scan TRAY failed - dusting"
-                        )
-                        self.set_system_message(
-                            sfc_request_params.notify_text_still_dusty, "red"
-                        )
+        else:
+            if (
+                len(new_text) >= min_len
+                and not self.is_calling_sfc
+                and self.is_running_stream
+                and self.is_auto_process
+            ):
+                is_valid_mac = self.validator_mac_input(new_text[0:min_len])
+                if is_valid_mac:
+                    self.input_mac_value = new_text[0:min_len]
                     self.ui_mac_input.setText("")
+                    self.set_system_message(
+                        sfc_request_params.notify_text_valid_sn, color="green"
+                    )
+                    self.start_operation = time.time()
+                    operation_history_log.info(f"Scan SN: {self.input_mac_value} - PASS")
+
+                    return
+                if self.input_mac_value == "":
+                    self.set_system_message(
+                        sfc_request_params.notify_text_invalid_sn, color="red"
+                    )
+                    operation_history_log.warning(f"SN scan failed: {self.input_mac_value}")
+                    self.ui_mac_input.setText("")
+                else:
+                    if len(new_text) >= product_config_params.tray_min_len:
+                        if self.is_abnormal is False:
+                            self.set_system_message(
+                                sfc_request_params.notify_text_valid_tray, color="green"
+                            )
+                            operation_history_log.info(
+                                f"SN: {self.input_mac_value} - scan TRAY PASS"
+                            )
+                            self.input_tray_value = new_text[
+                                0 : product_config_params.tray_min_len
+                            ]
+                            data_sfc = sfc_request_params.Data_send_to_SFC
+                            keys = list(data_sfc.keys())
+                            data_sfc[keys[0]] = sfc_request_params.LINE_NAME
+                            data_sfc[keys[1]] = sfc_request_params.GROUP_NAME
+                            data_sfc[keys[2]] = sfc_request_params.SP
+                            data_sfc[keys[3]] = (
+                                f"SN={self.input_mac_value},TRAY={self.input_tray_value},EMP={sfc_request_params.EMP},PASSED={sfc_request_params.PASSED}"
+                            )
+                            # self.is_calling_sfc = True
+                            self.send_sfc_request(data_sfc)
+                        else:
+                            operation_history_log.info(
+                                f"SN: {self.input_mac_value} - scan TRAY failed - dusting"
+                            )
+                            self.set_system_message(
+                                sfc_request_params.notify_text_still_dusty, "red"
+                            )
+                        self.ui_mac_input.setText("")
 
     def send_sfc_request(self, data: dict) -> None:
         if self.is_calling_sfc:
@@ -1038,6 +1044,7 @@ class MainWindowController(QMainWindow, Ui_MainWindow):
                     == sfc_request_params.SFC_Response_status
                 ):
                     try:
+                        self.is_abnormal = None
                         self.ui_mac_input.setText("")
                         self.data_products['sum_ok'] += 1
                         product_config_params.save_to_config_file()

@@ -97,7 +97,7 @@ class ImageProcessor:
         
         return normalized_shifted  
     
-    def normalize_heatmap_to_binary(self, heat_map:np.ndarray) -> np.ndarray:
+    def normalize_heatmap_to_binary(self, heat_map:np.ndarray, threshold = abnormal_inference_params.heat_map_NG_thresh_hold) -> np.ndarray:
         """
         Converts a heatmap to a binary map based on a threshold.
         This method creates a binary map from the input heatmap, where all values greater than or equal to
@@ -110,7 +110,7 @@ class ImageProcessor:
         """
         
         binary_map = np.zeros_like(heat_map, dtype=np.uint8)
-        binary_map[heat_map >= abnormal_inference_params.heat_map_NG_thresh_hold] = 255
+        binary_map[heat_map >= threshold] = 255
         return binary_map
     
     def get_top_left_point_box(self, box : np.ndarray):

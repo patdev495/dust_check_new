@@ -3,12 +3,9 @@ from watchdog.events import FileSystemEventHandler
 import threading
 import os
 import yaml
-import cv2
-import numpy as np
 import sys
 
 ignor_config = ["app_name", "module_name", "config",'filename','is_writting']
-
 
 def resource_path(relative_path):
     # Dùng để lấy đường dẫn file đúng khi chạy cả trong PyInstaller
@@ -132,28 +129,4 @@ class BaseParams:
         except Exception as e:
             print(f"[ERROR] Lỗi khi ghi config an toàn: {e}")
     
-class Image_Utils:  
-    @classmethod
-    def get_brightness_score(cls,image):
-        """
-        Tính tổng giá trị màu của ảnh bằng cách cộng kênh RGB và lấy trung bình.
-        
-        Parameters:
-            image (numpy.ndarray): Ảnh đầu vào, định dạng BGR (cv2)
-
-        Returns:
-            float: Giá trị độ sáng trung bình (brightness score)
-        """
-        if image is None or len(image.shape) < 2:
-            raise ValueError("Ảnh không hợp lệ hoặc trống.")
-
-        # Resize ảnh về kích thước chuẩn (tuỳ mục đích, bạn có thể bỏ nếu không cần)
-            image = cv2.resize(image, (480, 320))
-        # Cộng các kênh màu lại (B+G+R)
-        summed_image = np.sum(image, axis=-1)  # shape: (H, W)
-
-        # Tính độ sáng trung bình
-        brightness_score = round(float(np.mean(summed_image)), 2)
-
-        return brightness_score
 

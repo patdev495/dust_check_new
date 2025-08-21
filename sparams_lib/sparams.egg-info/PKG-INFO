@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: sparams
-Version: 1.0.0
+Version: 1.0.1
 Summary: A simple config watcher 
 Author: PAT
 Requires-Python: >=3.8
@@ -50,8 +50,5 @@ class Detect_LCD_Params(BaseParams):
         self.max_LCD_area_ratio = 0.8
         
         # Tham số xử lý màu
-        self.detect_threshold_color = 516
-        self.range_process_color = 30
-
         # Tự động tạo hoặc load cấu hình từ file YAML
         self.create_or_load_yaml()

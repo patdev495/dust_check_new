@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='sparams',
-    version='1.0.0',
+    version='1.0.1',
     description='A simple config watcher ',
     author='PAT',
     packages=find_packages(),

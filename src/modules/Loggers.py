@@ -43,11 +43,11 @@ console_formatter = logging.Formatter('%(levelname)s - %(message)s')
 console_logger = create_logger(name='app',level_log=logging.DEBUG if system_config_params.debug else logging.INFO,formatter=console_formatter)
 
 
-
 history_operation_formatter = logging.Formatter(
     fmt='[%(asctime)s] %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
 operation_history_log = create_logger('history',level_handle=logging.INFO,formatter=history_operation_formatter,log_dir=rf'{system_config_params.log_dir}\operation')
 
 

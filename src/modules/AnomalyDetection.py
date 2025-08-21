@@ -24,6 +24,9 @@ logger = logging.getLogger('app')
 class AnomalyDetection(ImageProcessor):
     def __init__(self) -> None:
         # self.image_processor = ImageProcessor()
+        self.abnormal_pixel_count1 = 0
+        self.abnormal_pixel_count2 = 0
+        self.abnormal_contours = []
         self.is_detected_CCD  = False
         self.is_abnormal  = True
         self.result_color  = (0,0,255)
@@ -204,6 +207,9 @@ class AnomalyDetection(ImageProcessor):
     
     def dust_detect_on_image(self, image: str | np.ndarray) -> None | tuple[np.ndarray,np.ndarray,bool,np.int32]:
         self.is_abnormal = True
+        self.abnormal_pixel_count1 = 0
+        self.abnormal_pixel_count2 = 0
+        self.abnormal_contours = []
         if isinstance(image, str):
             image = cv2.imread(image)
         if image is None:
@@ -311,8 +317,8 @@ class AnomalyDetection(ImageProcessor):
                     self.is_abnormal = False
                     # image_with_dust = cv2.polylines(image_with_dust, [original_box], True, self.result_color, 2, cv2.LINE_AA)
                 else:
-                    self.result_color = tuple(abnormal_inference_params.ng_color)
-                    self.is_abnormal = False
+                    # self.result_color = tuple(abnormal_inference_params.ng_color)
+                    # self.is_abnormal = False
                     rotated_contours = []
                     contour_global = None
                     # Vẽ contours lên ảnh gốc
@@ -333,59 +339,73 @@ class AnomalyDetection(ImageProcessor):
                         # threshold = abnormal_inference_params.brightness_threshold_caculate_dust_size * max_val
                         abnormal_pixel_count = np.sum(heatmap_values >= abnormal_inference_params.heat_map_NG_thresh_hold)
                         abnormal_pixel_count = math.ceil(math.sqrt(abnormal_pixel_count / 3.14))  # tính  bán kính hạt bụi
-                        
-                        if abnormal_pixel_count < abnormal_inference_params.min_abnormal_pixel_count:
-                            continue
-
-                        self.is_abnormal = True
-                       
                         radius_of_dust_in_um =  math.ceil(abnormal_pixel_count * camera_config_params.ratio_pixel_to_um * 10) / 10
-
-                        # Tính tâm contour để hiển thị số điểm
-
-                        contour_global = contour + np.array([[[top_left_point[0], top_left_point[1]]]])
-                        # 2. Chuyển contour sang float để nhân affine
-                        contour_global = contour_global.astype(np.float32)
-                        # 3. Áp dụng ma trận xoay affine
-                        contour_rotated = cv2.transform(contour_global, M_back)
-                        # 4. Chuyển lại về int nếu muốn vẽ
-                        contour_rotated = contour_rotated.astype(np.int32)
-                        rotated_contours.append(contour_rotated)
-
-                        M = cv2.moments(contour_rotated)
-                        if M["m00"] != 0:
-                            cx_text = int(M["m10"] / M["m00"]) + 7
-                            cy_text = int(M["m01"] / M["m00"])
-                            position_rotated = (int(cx_text), int(cy_text))
-                        else:
-                            position_rotated = (int(contour_rotated[0][0][0]), int(contour_rotated[0][0][1]))
-                    # Vẽ contours đã xoay lên ảnh gốc
-                        if abnormal_inference_params.is_need_show_abnormal_radius_size:
-                            cv2.putText(
-                                image_with_dust,
-                                f"{int(abnormal_pixel_count)} px" if not abnormal_inference_params.is_need_show_size_in_um else f"{float(radius_of_dust_in_um)} um",
-                                position_rotated,
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5,
-                                abnormal_inference_params.dust_color,
-                                1,
-                                lineType=cv2.LINE_AA
-                            )                      
                         
-                        if abnormal_inference_params.is_need_show_abnormal_score:
-                            cv2.putText(
-                                image_with_dust,
-                                str(f'{max_val:.3}'),
-                                (position_rotated[0]-100, position_rotated[1]),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5,
-                                abnormal_inference_params.dust_color,
-                                1,
-                                lineType=cv2.LINE_AA
-                            )
+                        if abnormal_pixel_count < 1:
+                            continue
+                        self.abnormal_contours.append({
+                            'contour': contour,
+                            'max_val': max_val,
+                            'abnormal_pixel_count': abnormal_pixel_count,
+                            'radius_of_dust_in_um': radius_of_dust_in_um,
+                        })
+                        
+                        if abnormal_pixel_count <= abnormal_inference_params.max_radius_abnormal_pixel_in_pixel:
+                            self.abnormal_pixel_count1 += 1
+                        if abnormal_pixel_count > abnormal_inference_params.max_radius_abnormal_pixel_in_pixel:
+                            self.abnormal_pixel_count2 += 1       
+                        
+                        # self.is_abnormal = True
+                    if self.abnormal_pixel_count1 > abnormal_inference_params.max_abnormal_count1 or self.abnormal_pixel_count2 > 0:
+                        self.result_color = tuple(abnormal_inference_params.ng_color)
+                        self.is_abnormal = True
+                        for contour in self.abnormal_contours:
+                            contour_global = contour['contour'] + np.array([[[top_left_point[0], top_left_point[1]]]])
+                            # 2. Chuyển contour sang float để nhân affine
+                            contour_global = contour_global.astype(np.float32)
+                            # 3. Áp dụng ma trận xoay affine
+                            contour_rotated = cv2.transform(contour_global, M_back)
+                            # 4. Chuyển lại về int nếu muốn vẽ
+                            contour_rotated = contour_rotated.astype(np.int32)
+                            rotated_contours.append(contour_rotated)
+
+                            M = cv2.moments(contour_rotated)
+                            if M["m00"] != 0:
+                                cx_text = int(M["m10"] / M["m00"]) + 7
+                                cy_text = int(M["m01"] / M["m00"])
+                                position_rotated = (int(cx_text), int(cy_text))
+                            else:
+                                position_rotated = (int(contour_rotated[0][0][0]), int(contour_rotated[0][0][1]))
+                        # Vẽ contours đã xoay lên ảnh gốc
+                            if abnormal_inference_params.is_need_show_abnormal_radius_size:
+                                cv2.putText(
+                                    image_with_dust,
+                                    f"{int(contour['abnormal_pixel_count'])} px" if not abnormal_inference_params.is_need_show_size_in_um else f"{float(contour['radius_of_dust_in_um'])} um",
+                                    position_rotated,
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5,
+                                    abnormal_inference_params.dust_color,
+                                    1,
+                                    lineType=cv2.LINE_AA
+                                )                      
+                            
+                            if abnormal_inference_params.is_need_show_abnormal_score:
+                                cv2.putText(
+                                    image_with_dust,
+                                    str(f'{contour['max_val']:.2}'),
+                                    (position_rotated[0]-100, position_rotated[1]),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5,
+                                    abnormal_inference_params.dust_color,
+                                    1,
+                                    lineType=cv2.LINE_AA
+                                )
 
 
-                    image_with_dust = cv2.drawContours(image_with_dust, rotated_contours, -1, abnormal_inference_params.dust_color, 2, cv2.LINE_AA)
+                        image_with_dust = cv2.drawContours(image_with_dust, rotated_contours, -1, abnormal_inference_params.dust_color, 2, cv2.LINE_AA)
+                    else:
+                        self.result_color = tuple(abnormal_inference_params.ok_color)
+                        self.is_abnormal = False
                 
         return image_with_heatmap,image_with_dust,self.is_abnormal,original_box
 
@@ -394,7 +414,7 @@ if __name__ == "__main__":
     # detector = AnomalyDetection()
     # video_source = camera_config_params.camera_source if camera_config_params.camera_source else 0
     print(1)
-
+ 
             
 
 
